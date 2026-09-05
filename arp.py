@@ -1,3 +1,5 @@
+"""ARP layer implementation."""
+
 from typing import Optional, Dict, Any
 import struct
 from ..packets.builder import PacketBuilder
@@ -73,4 +75,59 @@ class ARPBuilder(PacketBuilder):
         super().__init__()
         self.packet.add_layer(
             PacketLayer(
-                name="
+                name="arp",
+                data={"builder": "ARPBuilder"}
+            )
+        )
+    
+    def build_header(
+        self,
+        opcode: int = 1,
+        src_mac: Optional[str] = None,
+        src_ip: Optional[str] = None,
+        dst_mac: Optional[str] = None,
+        dst_ip: Optional[str] = None,
+        **kwargs
+    ) -> bytes:
+        """Build ARP header."""
+        src_mac = src_mac or generate_mac()
+        src_ip = src_ip or generate_ipv4()
+        dst_mac = dst_mac or "00:00:00:00:00:00"
+        dst_ip = dst_ip or generate_ipv4()
+        
+        # Parse addresses
+        src_mac_bytes = bytes.fromhex(src_mac.replace(":", ""))
+        src_ip_bytes = bytes(map(int, src_ip.split('.')))
+        dst_mac_bytes = bytes.fromhex(dst_mac.replace(":", ""))
+        dst_ip_bytes = bytes(map(int, dst_ip.split('.')))
+        
+        htype = 1  # Ethernet
+        ptype = 0x0800  # IPv4
+        hlen = 6
+        plen = 4
+        
+        header = struct.pack(
+            "!HHBBH",
+            htype,
+            ptype,
+            hlen,
+            plen,
+            opcode,
+        ) + src_mac_bytes + src_ip_bytes + dst_mac_bytes + dst_ip_bytes
+        
+        # Store layer data
+        layer_data = {
+            "opcode": opcode,
+            "src_mac": src_mac,
+            "src_ip": src_ip,
+            "dst_mac": dst_mac,
+            "dst_ip": dst_ip,
+        }
+        self.add_layer("arp", layer_data, header)
+        
+        return header
+    
+    def build_payload(self, payload: bytes) -> bytes:
+        """Build with payload."""
+        # ARP doesn't have payload
+        return payload
